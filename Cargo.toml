@@ -1,0 +1,22 @@
+[package]
+name = "paynow_zw"
+version = "0.1.0"
+edition = "2024"
+description = "Client for the Paynow Zimbabwe payment gateway"
+license = "MIT"
+authors = ["Believe Ralph Mataga"]
+repository = "https://github.com/matagaralph/paynow-rust"
+readme = "README.md"
+keywords = ["paynow", "payments", "zimbabwe", "ecocash", "gateway"]
+categories = ["api-bindings", "web-programming::http-client"]
+
+[features]
+default = ["ureq"]
+ureq = ["dep:ureq"]
+
+[dependencies]
+ureq = { version = "3.5.0", default-features = false, features = ["native-tls-no-default"], optional = true }
+
+[[example]]
+name = "mobile"
+required-features = ["ureq"]
