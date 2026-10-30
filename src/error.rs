@@ -6,6 +6,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[non_exhaustive]
 pub enum Error {
     EmptyCart,
+    /// An item has a quantity of zero.
+    ZeroQuantity,
     ZeroTotal,
     InvalidEmail,
     InvalidMerchantTrace,
@@ -25,6 +27,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyCart => f.write_str("payment must contain at least one item"),
+            Self::ZeroQuantity => f.write_str("item quantity must be at least one"),
             Self::ZeroTotal => f.write_str("transaction total must be greater than zero"),
             Self::InvalidEmail => {
                 f.write_str("a valid auth email is required for mobile transactions")

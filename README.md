@@ -171,6 +171,7 @@ match client.send(&payment) {
 | Variant | Meaning |
 |---------|---------|
 | `Error::EmptyCart` | The payment has no items. |
+| `Error::ZeroQuantity` | An item has a quantity of zero. |
 | `Error::ZeroTotal` | The payment's total is zero. |
 | `Error::InvalidEmail` | A mobile payment lacks a valid auth email. |
 | `Error::InvalidMerchantTrace` | The merchant trace is empty or longer than 32 characters. |

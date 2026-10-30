@@ -5,14 +5,14 @@ pub struct Item {
     pub title: String,
     /// Unit price in cents.
     pub amount: u64,
-    /// Zero counts as one.
+    /// Must be at least one, or sending the payment fails with [`Error::ZeroQuantity`].
     pub quantity: u32,
 }
 
 impl Item {
     /// In cents.
     pub fn subtotal(&self) -> u64 {
-        self.amount.saturating_mul(u64::from(self.quantity.max(1)))
+        self.amount.saturating_mul(u64::from(self.quantity))
     }
 }
 
@@ -83,6 +83,8 @@ impl Payment {
     pub(crate) fn validate(&self) -> Result<()> {
         if self.items.is_empty() {
             Err(Error::EmptyCart)
+        } else if self.items.iter().any(|item| item.quantity == 0) {
+            Err(Error::ZeroQuantity)
         } else if self.total() == 0 {
             Err(Error::ZeroTotal)
         } else if self
@@ -151,10 +153,11 @@ mod tests {
     }
 
     #[test]
-    fn zero_quantity_counts_as_one() {
+    fn zero_quantity_is_rejected() {
         let mut payment = Payment::new("INV-2", "");
-        payment.add_with_quantity("Book", 2000, 0);
-        assert_eq!(payment.total(), 2000);
+        payment.add("Pen", 200).add_with_quantity("Book", 2000, 0);
+        assert_eq!(payment.total(), 200);
+        assert!(matches!(payment.validate(), Err(Error::ZeroQuantity)));
     }
 
     #[test]
