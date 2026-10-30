@@ -15,6 +15,7 @@ default = ["ureq"]
 ureq = ["dep:ureq"]
 
 [dependencies]
+sha2 = { version = "0.11.1", default-features = false }
 ureq = { version = "3.5.0", default-features = false, features = ["native-tls-no-default"], optional = true }
 
 [[example]]
