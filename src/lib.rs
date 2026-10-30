@@ -18,8 +18,10 @@
 //! # Ok::<(), paynow_zw::Error>(())
 //! ```
 //!
-//! Requests go through `ureq` by default. Disable the `ureq` feature to bring your own HTTP
-//! client, then pass any [`Transport`] to [`Client::with_transport`].
+//! Requests go through `ureq` by default. To use another HTTP client, sync or async, create the
+//! client with [`Client::without_transport`], build each request with a `*_request` method such
+//! as [`Client::mobile_request`], send it yourself and pass the reply to the matching `parse_*`
+//! method. Disable the `ureq` feature if you do not need it.
 
 mod client;
 mod error;
@@ -33,7 +35,7 @@ mod transport;
 #[cfg(test)]
 mod tests;
 
-pub use client::Client;
+pub use client::{Client, Request};
 pub use error::{Error, Result};
 pub use form::Fields;
 pub use payment::{Item, Payment};
