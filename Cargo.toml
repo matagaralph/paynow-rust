@@ -2,6 +2,7 @@
 name = "paynow_zw"
 version = "0.2.0"
 edition = "2024"
+rust-version = "1.88"
 description = "Client for the Paynow Zimbabwe payment gateway"
 license = "MIT"
 authors = ["Believe Ralph Mataga"]
