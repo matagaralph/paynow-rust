@@ -38,12 +38,12 @@ fn main() -> Result<(), Error> {
         let update = client.poll_transaction(&poll_url)?;
         println!("Status: {}", update.status);
 
-        if update.is_paid() {
-            println!("Payment successful!");
-            return Ok(());
-        }
-        if update.status.is_failed() {
-            println!("Payment failed.");
+        if !update.status.is_pending() {
+            if update.is_paid() {
+                println!("Payment successful!");
+            } else {
+                println!("Payment not completed: {}", update.status);
+            }
             return Ok(());
         }
         thread::sleep(Duration::from_secs(5));
