@@ -12,7 +12,7 @@ A Rust client for the [Paynow Zimbabwe](https://www.paynow.co.zw/) payment gatew
 
 ```toml
 [dependencies]
-paynow_zw = "0.1"
+paynow_zw = "0.2"
 ```
 
 Requests go through `ureq` using the platform's TLS library: OpenSSL on Linux, SChannel on Windows and Security.framework on macOS. Paynow only accepts TLS 1.2 with CBC cipher suites, which pure Rust TLS (rustls) refuses, so the platform library is required. On Linux, building needs the OpenSSL headers (`libssl-dev` on Debian and Ubuntu, `openssl` on Arch).
@@ -20,7 +20,7 @@ Requests go through `ureq` using the platform's TLS library: OpenSSL on Linux, S
 For a crate with no dependencies at all, turn off the default feature and supply your own transport (see [Custom transport](#custom-transport)):
 
 ```toml
-paynow_zw = { version = "0.1", default-features = false }
+paynow_zw = { version = "0.2", default-features = false }
 ```
 
 ## Getting started
