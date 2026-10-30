@@ -6,7 +6,7 @@ A Rust client for the [Paynow Zimbabwe](https://www.paynow.co.zw/) payment gatew
 - **Mobile (express checkout)**: charge EcoCash, OneMoney or InnBucks directly.
 - **Status polling** and **result URL webhooks**, with automatic hash verification.
 - **Merchant tracing**, to recover a mobile transaction whose reply was lost.
-- A pluggable HTTP transport, with [`ureq`](https://crates.io/crates/ureq) as the optional default.
+- **Works with any HTTP client**, sync or async, with [`ureq`](https://crates.io/crates/ureq) as the optional blocking default.
 
 ## Installation
 
@@ -17,7 +17,7 @@ paynow_zw = "0.2"
 
 Requests go through `ureq` using the platform's TLS library: OpenSSL on Linux, SChannel on Windows and Security.framework on macOS. Paynow only accepts TLS 1.2 with CBC cipher suites, which pure Rust TLS (rustls) refuses, so the platform library is required. On Linux, building needs the OpenSSL headers (`libssl-dev` on Debian and Ubuntu, `openssl` on Arch).
 
-To use your own HTTP client instead, turn off the default feature and supply your own transport (see [Custom transport](#custom-transport)):
+To use your own HTTP client instead, such as `reqwest` in an async web server, turn off the default feature (see [Async and other HTTP clients](#async-and-other-http-clients)):
 
 ```toml
 paynow_zw = { version = "0.2", default-features = false }
@@ -207,11 +207,70 @@ let client = Client::with_transport(id, key, |url: &str, body: &str| {
 });
 ```
 
+## Async and other HTTP clients
+
+The blocking methods above stall an async runtime such as tokio, which axum and actix-web run on. For async code, let the library build each request and check each reply, and do the sending yourself with any HTTP client:
+
+| Operation | Build the request | Check the reply |
+|-----------|-------------------|-----------------|
+| Web payment | `web_request` | `parse_web_response` |
+| Mobile payment | `mobile_request` | `parse_mobile_response` |
+| Polling | `poll_request` | `parse_status_response` |
+| Tracing | `trace_request` | `parse_trace_response` |
+
+Each `Request` holds a `url` and a `body`. POST the body to the URL with the content type `Request::CONTENT_TYPE`. The blocking methods do exactly the same thing with their transport, so both paths send identical requests and check replies identically.
+
+With `reqwest`, turn on its `native-tls` feature. Since 0.13, `reqwest` uses rustls by default, which cannot connect to Paynow (see [Installation](#installation)):
+
+```toml
+[dependencies]
+paynow_zw = { version = "0.2", default-features = false }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
+```
+
+```rust
+use std::time::Duration;
+
+use paynow_zw::{Client, PaymentMethod, Request};
+
+async fn post(http: &reqwest::Client, request: Request) -> reqwest::Result<String> {
+    http.post(request.url)
+        .header(reqwest::header::CONTENT_TYPE, Request::CONTENT_TYPE)
+        .body(request.body)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await
+}
+
+async fn pay() -> Result<(), Box<dyn std::error::Error>> {
+    let http = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    let paynow = Client::without_transport("INTEGRATION_ID", "INTEGRATION_KEY")
+        .with_result_url("https://example.com/paynow/result")
+        .with_return_url("https://example.com/paynow/return");
+
+    let mut payment = paynow.payment("INV-1001", "customer@example.com");
+    payment.add("T-shirt", 1000);
+    payment.merchant_trace = Some("INV-1001-1".into());
+
+    let request = paynow.mobile_request(&payment, "0771234567", PaymentMethod::Ecocash)?;
+    let reply = post(&http, request).await?;
+    let response = paynow.parse_mobile_response(&reply)?;
+    println!("Poll at {}", response.poll_url);
+    Ok(())
+}
+```
+
+Paynow answers its own errors with HTTP 200, so treat any other status as a failed request, as `error_for_status` does above. If a mobile payment request fails or times out, you cannot tell whether Paynow received it. Look it up with `trace_request` and `parse_trace_response` before trying again, as described in [Recovering after a timeout](#recovering-after-a-timeout).
+
 ## Crate layout
 
 | File | Responsibility |
 |------|----------------|
-| `client.rs` | `Client`: sending, polling, tracing and status updates |
+| `client.rs` | `Client` and `Request`: building requests, checking replies, and the blocking round trips |
 | `payment.rs` | Building a payment and its cart, amounts and email validation |
 | `response.rs` | `WebResponse`, `MobileResponse`, `StatusResponse`, `Trace` and `InnBucks` |
 | `status.rs` | Payment methods and transaction statuses |

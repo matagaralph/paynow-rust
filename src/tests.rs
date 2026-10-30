@@ -432,3 +432,103 @@ fn request_hash_matches_the_go_sdk() {
         )
     );
 }
+
+fn sans_io() -> Client {
+    Client::without_transport("12345", KEY)
+        .with_result_url("https://example.com/result")
+        .with_return_url("https://example.com/return")
+}
+
+#[test]
+fn sans_io_requests_match_the_blocking_ones() {
+    let mut payment = payment();
+    payment.merchant_trace = Some("TRACE-1".into());
+    let client = sans_io();
+
+    let mock = Mock::new("status=Error&error=stop");
+    let blocking = self::client(&mock);
+    let sent = || {
+        let (url, body) = mock.request.borrow().clone();
+        crate::Request { url, body }
+    };
+
+    let _ = blocking.send(&payment);
+    assert_eq!(client.web_request(&payment).unwrap(), sent());
+
+    let _ = blocking.send_mobile(&payment, "0771234567", PaymentMethod::Ecocash);
+    assert_eq!(
+        client
+            .mobile_request(&payment, "0771234567", PaymentMethod::Ecocash)
+            .unwrap(),
+        sent()
+    );
+
+    let _ = blocking.poll_transaction(POLL_URL);
+    assert_eq!(client.poll_request(POLL_URL), sent());
+
+    let _ = blocking.trace("TRACE-1");
+    assert_eq!(client.trace_request("TRACE-1"), sent());
+}
+
+#[test]
+fn sans_io_requests_are_validated() {
+    let client = sans_io();
+    assert!(matches!(
+        unwrap_err(client.web_request(&Payment::new("INV-1", ""))),
+        Error::EmptyCart
+    ));
+
+    let mut payment = payment();
+    payment.auth_email = String::new();
+    assert!(matches!(
+        unwrap_err(client.mobile_request(&payment, "0771234567", PaymentMethod::Ecocash)),
+        Error::InvalidEmail
+    ));
+}
+
+#[test]
+fn sans_io_parses_replies_like_the_blocking_path() {
+    let client = sans_io();
+
+    let web = signed(&[
+        ("status", "Ok"),
+        (
+            "browserurl",
+            "https://www.paynow.co.zw/Payment/ConfirmPayment/1",
+        ),
+        ("pollurl", POLL_URL),
+    ]);
+    assert_eq!(
+        client.parse_web_response(&web).unwrap(),
+        self::client(&Mock::new(web)).send(&payment()).unwrap()
+    );
+
+    let mobile = signed(&[("status", "Ok"), ("pollurl", POLL_URL)]);
+    assert_eq!(
+        client.parse_mobile_response(&mobile).unwrap(),
+        self::client(&Mock::new(mobile))
+            .send_mobile(&payment(), "0771234567", PaymentMethod::Ecocash)
+            .unwrap()
+    );
+
+    assert_eq!(
+        client.parse_status_response(&paid_update()).unwrap(),
+        self::client(&Mock::new(paid_update()))
+            .poll_transaction(POLL_URL)
+            .unwrap()
+    );
+
+    let not_found = signed(&[("status", "NotFound")]);
+    assert_eq!(
+        client.parse_trace_response(&not_found).unwrap(),
+        Trace::NotFound
+    );
+    assert!(matches!(
+        unwrap_err(client.parse_trace_response("status=NotFound")),
+        Error::MissingHash
+    ));
+    assert!(matches!(
+        unwrap_err(client.parse_status_response("status=Paid&hash=WRONG")),
+        Error::HashMismatch
+    ));
+}
