@@ -6,7 +6,7 @@ A Rust client for the [Paynow Zimbabwe](https://www.paynow.co.zw/) payment gatew
 - **Mobile (express checkout)**: charge EcoCash, OneMoney or InnBucks directly.
 - **Status polling** and **result URL webhooks**, with automatic hash verification.
 - **Merchant tracing**, to recover a mobile transaction whose reply was lost.
-- A single optional dependency, [`ureq`](https://crates.io/crates/ureq), with a pluggable HTTP transport.
+- A pluggable HTTP transport, with [`ureq`](https://crates.io/crates/ureq) as the optional default.
 
 ## Installation
 
@@ -17,7 +17,7 @@ paynow_zw = "0.2"
 
 Requests go through `ureq` using the platform's TLS library: OpenSSL on Linux, SChannel on Windows and Security.framework on macOS. Paynow only accepts TLS 1.2 with CBC cipher suites, which pure Rust TLS (rustls) refuses, so the platform library is required. On Linux, building needs the OpenSSL headers (`libssl-dev` on Debian and Ubuntu, `openssl` on Arch).
 
-For a crate with no dependencies at all, turn off the default feature and supply your own transport (see [Custom transport](#custom-transport)):
+To use your own HTTP client instead, turn off the default feature and supply your own transport (see [Custom transport](#custom-transport)):
 
 ```toml
 paynow_zw = { version = "0.2", default-features = false }
@@ -216,7 +216,7 @@ let client = Client::with_transport(id, key, |url: &str, body: &str| {
 | `response.rs` | `WebResponse`, `MobileResponse`, `StatusResponse`, `Trace` and `InnBucks` |
 | `status.rs` | Payment methods and transaction statuses |
 | `form.rs` | Ordered form encoding and response parsing |
-| `hash.rs` | SHA-512 request and response signing |
+| `hash.rs` | Request and response signing with SHA-512 |
 | `transport.rs` | `Transport` and the default `Ureq` transport |
 | `error.rs` | `Error` and `Result` |
 

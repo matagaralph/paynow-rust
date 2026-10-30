@@ -18,8 +18,8 @@
 //! # Ok::<(), paynow_zw::Error>(())
 //! ```
 //!
-//! Requests go through `ureq` by default. Disable the `ureq` feature for a crate with no
-//! dependencies, then pass any [`Transport`] to [`Client::with_transport`].
+//! Requests go through `ureq` by default. Disable the `ureq` feature to bring your own HTTP
+//! client, then pass any [`Transport`] to [`Client::with_transport`].
 
 mod client;
 mod error;

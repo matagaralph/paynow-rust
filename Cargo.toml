@@ -2,6 +2,7 @@
 name = "paynow_zw"
 version = "0.2.0"
 edition = "2024"
+rust-version = "1.88"
 description = "Client for the Paynow Zimbabwe payment gateway"
 license = "MIT"
 authors = ["Believe Ralph Mataga"]
@@ -15,6 +16,7 @@ default = ["ureq"]
 ureq = ["dep:ureq"]
 
 [dependencies]
+sha2 = { version = "0.11.1", default-features = false }
 ureq = { version = "3.5.0", default-features = false, features = ["native-tls-no-default"], optional = true }
 
 [[example]]
